@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-30T00:00:00-05:00",
+  "title": "Design System: SILK NODE",
+  "extensions": {
+    "shadows": [
+      {
+        "name": "surface",
+        "value": "5px 10px 18px #19212625",
+        "purpose": "Mapa, entrada y ayuda contextual."
+      }
+    ],
+    "motion": [
+      {
+        "name": "screen-transition",
+        "value": ".7s cubic-bezier(.22,1,.36,1)",
+        "purpose": "Entrada vertical; desactivada con movimiento reducido."
+      },
+      {
+        "name": "organic-float",
+        "value": "14s ease-in-out infinite alternate",
+        "purpose": "Decoración de portada; pausada al planificar."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-max-height",
+        "value": "750px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Acción principal",
+      "kind": "button",
+      "description": "Acción principal",
+      "html": "<button class=\"ds-primary\">Buscar óptimo</button>",
+      "css": ".ds-primary{font-family:\"League Spartan\",sans-serif;background:var(--yellow,#fcba15);color:var(--ink,#192126);border:0;border-radius:18px;padding:11px 8px;font-size:17px;font-weight:600}.ds-primary:hover{background:#ffd053}.ds-primary:focus-visible{outline:3px solid var(--teal,#309bb3);outline-offset:2px}.ds-primary:active{transform:translateY(1px)}",
+      "refersTo": "button-primary"
+    },
+    {
+      "name": "Empezar",
+      "kind": "button",
+      "description": "Empezar",
+      "html": "<button class=\"ds-start\">Empezar</button>",
+      "css": ".ds-start{font-family:\"League Spartan\",sans-serif;background:var(--ink,#192126);color:var(--yellow,#fcba15);border:0;border-radius:24px;padding:19px 48px;font-size:27px;font-weight:600;box-shadow:5px 10px 18px #19212625}.ds-start:hover{background:#293a42}.ds-start:focus-visible{outline:3px solid var(--teal,#309bb3);outline-offset:2px}.ds-start:active{transform:translateY(1px)}",
+      "refersTo": "button-start"
+    },
+    {
+      "name": "Selector de mapa",
+      "kind": "input",
+      "description": "Único selector del panel de red.",
+      "html": "<label class=\"ds-label\">Mapa<select class=\"ds-select\"><option>China</option><option>Perú</option></select></label>",
+      "css": ".ds-label{display:flex;flex-direction:column;gap:5px;font-family:\"League Spartan\",sans-serif;font-size:13px;color:var(--muted,#526268);font-weight:600}.ds-select{font-family:inherit;font-size:17px;height:34px;padding:5px 8px;border:1px solid #b7c6cb;border-radius:8px;background:white;color:var(--ink,#192126)}.ds-select:hover{border-color:var(--teal,#309bb3)}.ds-select:focus-visible{outline:3px solid var(--teal,#309bb3);outline-offset:2px}"
+    },
+    {
+      "name": "Modos de red",
+      "kind": "nav",
+      "description": "Elegir un modo antes de seleccionar ciudades en el mapa.",
+      "html": "<div class=\"ds-modes\" role=\"group\" aria-label=\"Modo de construcción\"><button aria-pressed=\"true\">Manual</button><button aria-pressed=\"false\">Conectar todo</button><button aria-pressed=\"false\">Aleatorio</button></div>",
+      "css": ".ds-modes{display:flex;gap:6px}.ds-modes button{font-family:\"League Spartan\",sans-serif;flex:1;border:0;border-radius:10px;background:var(--ink,#192126);color:white;font-size:14px;padding:9px 6px}.ds-modes button[aria-pressed=true]{background:var(--teal,#309bb3);color:var(--ink,#192126);box-shadow:inset 0 -3px 0 #14677a}.ds-modes button:hover{background:#254451;color:white}.ds-modes button:focus-visible{outline:3px solid var(--teal,#309bb3);outline-offset:2px}"
+    },
+    {
+      "name": "Superficie de mapa",
+      "kind": "card",
+      "description": "Superficie de mapa",
+      "html": "<div class=\"ds-map\">Mapa ferroviario simulado</div>",
+      "css": ".ds-map{font-family:\"League Spartan\",sans-serif;background:var(--ink,#192126);color:white;border:2px solid var(--ink,#192126);border-radius:25px;padding:20px;min-height:100px;box-shadow:5px 10px 18px #19212625}"
+    }
+  ],
+  "narrative": {
+    "overview": "Referencia visual aprobada SILK NODE: mapa protagonista, League Spartan local, superficies blancas y acciones amarillas.",
+    "keyCharacteristics": [
+      "Solo PC",
+      "Matriz cuadrada y recorrido a la izquierda",
+      "Selección directa en el mapa",
+      "Dos pantallas sin scroll"
+    ],
+    "rules": [
+      {
+        "name": "Movimiento reducido",
+        "body": "Eliminar transición y animación decorativa según la preferencia del usuario.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Mantener identidad del PDF y foco visible.",
+      "Conservar pesos y estados legibles en el mapa."
+    ],
+    "donts": [
+      "No reintroducir pixel-art ni controles retirados.",
+      "No presentar costos simulados como presupuestos reales."
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "silknode",
+  "version": 1,
+  "region": "peru",
+  "selected": [
+    "peru-lima",
+    "peru-arequipa",
+    "peru-trujillo",
+    "peru-chiclayo",
+    "peru-iquitos"
+  ],
+  "edges": [],
+  "mode": "manual"
+}

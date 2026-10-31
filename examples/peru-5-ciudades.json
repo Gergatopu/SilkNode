@@ -1,0 +1,25 @@
+{
+  "schema": "silknode",
+  "version": 1,
+  "region": "peru",
+  "selected": [
+    "peru-lima",
+    "peru-arequipa",
+    "peru-trujillo",
+    "peru-chiclayo",
+    "peru-iquitos"
+  ],
+  "edges": [
+    "peru-arequipa|peru-lima",
+    "peru-lima|peru-trujillo",
+    "peru-chiclayo|peru-lima",
+    "peru-iquitos|peru-lima",
+    "peru-arequipa|peru-trujillo",
+    "peru-arequipa|peru-chiclayo",
+    "peru-arequipa|peru-iquitos",
+    "peru-chiclayo|peru-trujillo",
+    "peru-iquitos|peru-trujillo",
+    "peru-chiclayo|peru-iquitos"
+  ],
+  "mode": "all"
+}
