@@ -8,8 +8,9 @@
 .matrix-panel[hidden]{display:flex!important;visibility:hidden;pointer-events:none}
 .matrix td{padding:0}
 .matrix td.connected{background:#e5f2f5}
-.matrix-cost,.matrix-activate{display:block;width:100%;height:100%;min-width:0;min-height:0;margin:0;padding:0;border:0;border-radius:0;font:inherit;text-align:center;color:inherit;background:transparent}
-.matrix-activate:hover:not(:disabled){background:#30505a}
+.matrix td{position:relative}
+.matrix-cost{position:absolute;inset:0;display:block;box-sizing:border-box;width:100%;height:100%;min-width:0;min-height:0;margin:0;padding:0;border:0;border-radius:0;font:inherit;text-align:center;color:inherit;background:transparent}
+.matrix td.unavailable .matrix-cost:hover{background:#30505a}
 .matrix-cost{cursor:text;outline-offset:-2px!important}
 .matrix-cost:focus{background:#fff4cd;outline:2px solid var(--teal)}
 .matrix-cost[aria-invalid=true]{background:#ffe0dc;outline:2px solid var(--red)}

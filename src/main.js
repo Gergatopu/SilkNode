@@ -84,26 +84,30 @@ function renderMatrix(){
  $('#matrix-content').innerHTML=`<table class="matrix"><thead><tr><th aria-label="Ciudad"></th>${cs.map((c,i)=>`<th title="${c.name}">${i+1}</th>`).join('')}</tr></thead><tbody>${cs.map((a,i)=>`<tr><th title="${a.name}">${i+1}</th>${cs.map((b,j)=>{
   const key=edgeKey(a.id,b.id),filled=i!==j&&edges.has(key),label=`${a.name} a ${b.name}`;
   let content=filled?cost(a,b):'';
-  if(mode==='manual'&&i!==j)content=filled?`<input class="matrix-cost" data-cost="${key}" aria-label="Costo ${label}" inputmode="numeric" maxlength="2" value="${cost(a,b)}" autocomplete="off" spellcheck="false">`:`<button class="matrix-activate" data-activate="${key}" data-row="${i}" data-column="${j}" aria-label="Conectar ${label}"></button>`;
+  if(mode==='manual'&&i!==j)content=`<input class="matrix-cost" data-cost="${key}" aria-label="Costo ${label}" inputmode="numeric" maxlength="2" value="${filled?cost(a,b):''}" autocomplete="off" spellcheck="false">`;
   return `<td class="${filled?'connected':'unavailable'}" title="${label}${i===j?': misma ciudad':filled?': costo en M USD':': sin enlace'}">${content}</td>`;
  }).join('')}</tr>`).join('')}</tbody></table>`;
- $$('[data-activate]').forEach(button=>button.onclick=()=>{
-  const key=button.dataset.activate,row=+button.dataset.row,column=+button.dataset.column;
-  invalidate();edges.add(key);manualStart=null;refresh();
-  const input=$('.matrix').rows[row+1].cells[column+1].querySelector('input');input.focus({preventScroll:true});input.select();
- });
+ // Keep the same input mounted when creating an edge: replacing the focused
+ // cell here can discard the user's first keystroke or leave an empty hit area.
+ function updateCost(input,value){
+  const key=input.dataset.cost;
+  if(edges.has(key)&&weights[key]===value){notice('');return;}
+  invalidate();edges.add(key);manualStart=null;manualWeights[key]=value;weights[key]=value;
+  $$('[data-cost]').filter(other=>other.dataset.cost===key).forEach(other=>{
+   other.value=String(value);other.setAttribute('aria-invalid','false');
+   other.closest('td').className='connected';
+   other.closest('td').title=other.getAttribute('aria-label').replace(/^Costo /,'')+': costo en M USD';
+  });
+  renderCycle();renderNavigation();renderMap();
+  analysisTimer=setTimeout(()=>analyze(),140);
+ }
  $$('[data-cost]').forEach(input=>{
-  input.onfocus=()=>input.select();
+  input.onfocus=()=>{if(!edges.has(input.dataset.cost))updateCost(input,weights[input.dataset.cost]);input.select();};
   input.oninput=()=>{
    const valid=/^[1-9][0-9]?$/.test(input.value);
    input.setAttribute('aria-invalid',String(!valid));
    if(!valid){notice('Introduce un número entero entre 1 y 99.',true);return;}
-   const key=input.dataset.cost,value=Number(input.value);
-   if(value===weights[key]){notice('');return;}
-   invalidate();manualWeights[key]=value;weights[key]=value;
-   $$('[data-cost]').filter(other=>other!==input&&other.dataset.cost===key).forEach(other=>{other.value=String(value);other.setAttribute('aria-invalid','false');});
-   renderCycle();renderNavigation();renderMap();
-   analysisTimer=setTimeout(()=>analyze(),140);
+   updateCost(input,Number(input.value));
   };
   input.onblur=()=>{if(!/^[1-9][0-9]?$/.test(input.value)){input.value=String(weights[input.dataset.cost]);input.setAttribute('aria-invalid','false');notice('Se conservó el último costo válido (1–99).');}};
   input.onkeydown=e=>{if(e.key==='Enter'||e.key==='Escape'){e.preventDefault();input.blur();}};

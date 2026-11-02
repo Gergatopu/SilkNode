@@ -77,7 +77,7 @@ Botones y campos redondeados, mapa con esquinas amplias y controles de informaci
 
 Las acciones principales son amarillas; los tres modos de red, carbón, con selección turquesa. Foco visible turquesa, estados deshabilitados atenuados y pulsación con desplazamiento mínimo. El selector de mapa es el único campo de selección del panel.
 
-La matriz cuadrada usa cifras tabulares en negrita. Diagonal y enlaces ausentes se dibujan como casillas oscuras vacías, sin cero, guion ni editor; conservan etiquetas accesibles. El recorrido muestra ciudades, suma, mejor visitado y avance manual por pasos. El mapa conserva pesos visibles y enfatiza el ciclo activo en rojo. La papelera limpia selección y enlaces.
+La matriz cuadrada aparece desde cinco ciudades y usa cifras tabulares en negrita. Diagonal y enlaces ausentes se dibujan como casillas oscuras vacías, sin cero ni guion; conservan etiquetas accesibles. En Manual, las casillas fuera de la diagonal permiten activar enlaces y editar costos entre 1 y 99. Los enlaces activos tienen fondo claro y ambas casillas simétricas muestran el mismo valor. El recorrido muestra ciudades, suma, mejor visitado y avance manual por pasos. El mapa conserva pesos visibles y enfatiza el ciclo activo en rojo. La papelera limpia selección, enlaces y costos personalizados.
 
 La ayuda se integra en el mapa. La transición de entrada dura 0,7 s y las figuras tienen movimiento lento; movimiento reducido elimina transición y animación decorativa. Las figuras se pausan dentro del planificador.
 
@@ -86,6 +86,6 @@ La ayuda se integra en el mapa. La transición de entrada dura 0,7 s y las figur
 - Mantener la referencia visual aprobada, League Spartan local y foco visible.
 - Mantener matriz y recorrido simultáneos a la izquierda en PC.
 - Conservar el mapa como único lugar para seleccionar ciudades.
-- No reintroducir controles retirados: archivos, listas de ciudades, edición de costos, modos de costo, reproducción, velocidad ni vistas móviles.
+- No reintroducir controles retirados: archivos, listas de ciudades, modos de costo, reproducción, velocidad ni vistas móviles. La edición de costos se limita a la matriz en Manual.
 - No introducir scroll, pixel-art, fuentes remotas ni ventanas grandes que oculten el trabajo.
 - No presentar costos simulados como inversión ferroviaria real.
