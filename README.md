@@ -22,13 +22,13 @@ Ejecutar `npm run build` después de cualquier cambio. La carpeta `dist` resulta
 ## Uso en computadora
 
 1. Pulsar **Empezar**, elegir escenario y modo. Seleccionar 5–10 de las 20 ciudades en el mapa.
-2. En **Manual**, pulsar dos ciudades seleccionadas para crear o quitar su conexión. Al crearla aparece el costo predeterminado.
-3. Pulsar el peso de una arista para editarlo (entero 1–99), guardar, cancelar o eliminar la conexión. Mayús + clic elimina una ciudad.
+2. En **Manual**, pulsar una ciudad y luego otra: la arista aparece desde la segunda ciudad. Repetir con parejas nuevas o existentes; repetir una arista no la elimina. Se permiten componentes desconectados y hasta 10 ciudades.
+3. Pulsar cualquier parte de una arista o su peso para editarlo (entero 1–99), guardar, cancelar o eliminar la conexión. Mayús + clic elimina una ciudad. La búsqueda requiere al menos 5 ciudades.
 4. **Conectar todo** une cada pareja. **Aleatorio** regenera conexiones sin garantizar un ciclo y sin cambiar sus costos predeterminados.
 5. El botón **Encontrar ruta óptima** siempre permanece visible. Está atenuado mientras no haya ciclos o se esté evaluando; se habilita en verde cuando existe al menos uno.
-6. La lista **Todos** muestra los ciclos disponibles con paginación. La navegación y el paso a paso permanecen dentro del mapa.
-7. Si no hay ciclos, las líneas discontinuas sugieren el mínimo número de conexiones para formar uno. Si hay ciclos pero falta el óptimo de referencia, se sugieren las conexiones para completarlo.
-8. La referencia compara todas las conexiones posibles de las mismas ciudades usando exclusivamente los costos predeterminados. Entre óptimos empatados se elige el que requiere menos enlaces nuevos. No sobrescribe pesos editados; por eso puede diferir del mínimo con costos personalizados.
+6. La lista **Todos** muestra los ciclos disponibles con paginación y tantas filas como caben en su panel. La navegación y el paso a paso permanecen dentro del mapa.
+7. Si no hay ciclos, el panel indica el mínimo número de conexiones para formar uno; entre reparaciones de igual tamaño elige el circuito de menor costo total. No dibuja conexiones ficticias durante la construcción.
+8. Solo después de pulsar **Encontrar ruta óptima**, se ofrece una mejora si el grafo completo de las mismas ciudades contiene un circuito estrictamente más barato. Se respetan los pesos actuales y, entre óptimos empatados, se prefieren menos conexiones nuevas. **Añadir aristas y ver nuevo óptimo** incorpora la sugerencia y muestra automáticamente el nuevo mínimo.
 9. **Ver matriz** abre una consulta simétrica de los costos actuales, sin edición. La papelera limpia la sesión.
 
 Interfaz para PC, sin scroll de página. Controles, resultados y operaciones están dentro del mapa; la matriz solo aparece al solicitarla. La sesión no se guarda ni exporta. Cambiar de escenario o recargar limpia la red.
@@ -44,13 +44,13 @@ Cada enlace tiene un costo por defecto entero entre 1 y 90 **M USD simulados**, 
 
 El máximo se calcula sobre los 190 pares de las 20 ciudades del escenario. Cambiar la selección o regenerar enlaces no cambia los costos por defecto. Los factores son ilustrativos, no datos ferroviarios reales. Se calculan antes de resolver y no se ajustan para favorecer un circuito.
 
-`src/algorithm.js` implementa la búsqueda propia: fija como origen la primera ciudad seleccionada según el orden del catálogo, enumera permutaciones lexicográficamente y descarta la orientación inversa duplicada. Comprueba todos los enlaces, incluido el regreso, y registra costos solo para ciclos válidos. Evalúa `(n−1)! / 2` órdenes canónicos: 12 con 5 ciudades y 181440 con 10. Tiempo `O(n × (n−1)!)`; historial `O((n−1)!)`.
+`src/algorithm.js` implementa la búsqueda propia: fija como origen la primera ciudad seleccionada según el orden del catálogo, enumera permutaciones lexicográficamente y descarta la orientación inversa duplicada. Comprueba todos los enlaces, incluido el regreso, y registra costos solo para ciclos válidos. Evalúa `C = (n−1)! / 2` órdenes canónicos: 12 con 5 ciudades y 181440 con 10. Enumeración `O(nC)`, ordenamiento adicional `O(V log V)` para `V` ciclos válidos; memoria `O(C + n²)`.
 
-El solver mantiene índices por costo para identificar mínimo y empates, además del orden lexicográfico para navegación. La interfaz no incluye un navegador separado de empates. Sin solución, minimiza **el número de enlaces nuevos**, no su costo. El cálculo corre en un Web Worker tras una espera de 140 ms desde el último cambio; una edición cancela el cálculo anterior. La explicación por pasos utiliza la traza ya calculada, sin reproducción automática ni velocidad.
+El solver mantiene índices por costo para identificar mínimo y empates, además del orden lexicográfico para navegación. La interfaz no incluye un navegador separado de empates. Sin solución, minimiza primero **el número de enlaces nuevos** y después el costo total del circuito resultante. El cálculo corre en un Web Worker tras una espera de 140 ms desde el último cambio; una edición cancela el cálculo anterior. La explicación por pasos utiliza la traza ya calculada, sin reproducción automática ni velocidad.
 
 ## Código y bibliotecas
 
-- `src/algorithm.js` y `src/weights.js`: enumeración, sugerencias y costos propios.
+- `src/algorithm.js`, `src/graph.js` y `src/weights.js`: enumeración, construcción manual, sugerencias y costos propios.
 - `src/solver.worker.js`: cálculo separado del hilo de interfaz.
 - `src/main.js` y `src/style.css`: interfaz, mapa y estado de la sesión.
 - `public/data/`: cartografía y ciudades de Natural Earth.
@@ -79,3 +79,5 @@ Para actualizar: modificar y verificar el proyecto, guardar los cambios en un co
 Las conexiones rectas son hipotéticas: no representan vías existentes. Los costos no modelan terreno, infraestructura, fronteras, permisos ni inversión real. La cartografía regional muestra límites y divisiones, no calles ni estaciones. La enumeración exhaustiva se limita a 10 ciudades por su crecimiento factorial.
 
 Procedencia y licencias: `LICENSE/SOURCES.md`. Las instrucciones históricas de rediseño están marcadas como superadas en `docs/PROMPT-REDISENO-FINAL.md`.
+
+Material para preparar el informe académico (no es un informe terminado): [Guía técnica](docs/GUIA-TECNICA-INFORME.md).

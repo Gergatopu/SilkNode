@@ -1,5 +1,13 @@
 # Validación de la interfaz simplificada
 
+## Revisión vigente: construcción por parejas y mejora posterior — 4 de noviembre
+
+Esta revisión sustituye el comportamiento de referencia y construcción descrito en las entradas históricas de abajo. Las 19 pruebas automatizadas y la compilación de producción aprobaron. Se incorporaron pruebas de aristas desde el segundo clic, parejas desconectadas, duplicados sin eliminación, límite de diez ciudades, reparación mínima con desempate por costo total y aceptación de mejora con pesos vigentes.
+
+En el navegador local se comprobó: Pekín–Shanghái crea inmediatamente una arista de 25 con solo dos ciudades; pulsar la arista abre el editor. Un anillo Pekín–Shanghái–Wuhan–Chengdu–Harbin–Pekín ofrece 136 M USD. Antes de buscar no hay mejora visible; después propone 125 y tres conexiones faltantes; aceptarlas muestra automáticamente el óptimo de 125 y cuatro ciclos válidos. En Conectar todo, con esas cinco ciudades se muestran seis filas por página de doce ciclos a 1280×720, sin scroll de página. El contador tiene fondo transparente y texto blanco. La cantidad de filas depende del espacio disponible, no es un límite fijo de seis. Captura final: `.impeccable/review/manual-pairs.png`.
+
+La guía `docs/GUIA-TECNICA-INFORME.md` explica la versión vigente, sus pruebas y su correspondencia con la rúbrica; no es un informe académico terminado. Las comprobaciones siguientes se conservan como historial y no deben usarse para atribuir funciones eliminadas a la versión actual.
+
 ## Actualización del 4 de noviembre: trabajo dentro del grafo
 
 Esta versión sustituye la matriz editable permanente descrita en las comprobaciones históricas siguientes. Ahora se consulta mediante Ver matriz y los pesos se editan en el mapa. Se comprobaron en navegador: selección manual y creación de un anillo; botón deshabilitado sin ciclos; botón habilitado verde con ciclos; apertura del editor por clic y teclado; edición a 99 reflejada en ambas celdas de consulta; eliminación de arista; sugerencia del óptimo de referencia de 125 M USD y reincorporación de su enlace faltante. Sin errores de consola. Captura: `.impeccable/review/graph-workspace.png`. Las 17 pruebas automatizadas aprobaron, incluida independencia entre costos editados y referencia, reparación de referencia y desempate por menor número de aristas faltantes. Compilación aprobada. Revisión visual limitada a computadora; los resultados previos se conservan como historial.

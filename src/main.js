@@ -5,6 +5,7 @@ import '@fontsource/league-spartan/latin-700.css';
 import '@fontsource/league-spartan/latin-800.css';
 import { geoMercator, geoPath, geoArea, select, zoom, zoomIdentity } from 'd3';
 import { edgeKey, decode } from './algorithm.js';
+import { manualClick } from './graph.js';
 import { scenarioWeights, randomGraph } from './weights.js';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const fmt=n=>new Intl.NumberFormat('es-PE',{maximumFractionDigits:0}).format(n);
@@ -57,13 +58,13 @@ function invalidate(){
  cancelAnimationFrame(trainFrame);$('#progress').hidden=true;notice('');
 }
 function complete(){edges.clear();for(let i=0;i<selected.length;i++)for(let j=i+1;j<selected.length;j++)edges.add(edgeKey(selected[i],selected[j]));}
-function applyMode(){if(selected.length<5)return;if(mode==='all')complete();if(mode==='random')edges=new Set(randomGraph(selected,seed).edges);}
+function applyMode(){if(selected.length<2)return;if(mode==='all')complete();if(mode==='random')edges=new Set(randomGraph(selected,seed).edges);}
 function setMode(next){invalidate();mode=next;manualStart=null;if(next==='random')seed=crypto.getRandomValues(new Uint32Array(1))[0];applyMode();fitRequested=selected.length>=5;refresh();}
 function refresh(schedule=true){
  if(!regions)return;
  weights=mode==='manual'?{...defaultWeights,...manualWeights}:defaultWeights;
  for(const [id,value] of [['manual','manual'],['connect','all'],['random-edges','random']]){$('#'+id).classList.toggle('active',mode===value);$('#'+id).setAttribute('aria-pressed',mode===value);}
- const hint=!mode?'Elige un modo.':selected.length<5?`Selecciona ${5-selected.length} ciudad${selected.length===4?'':'es'} más en el mapa.`:mode==='manual'?'Conecta dos ciudades; pulsa el peso para editarlo (1–99).':mode==='random'?'Pulsa Aleatorio para generar otra red.':'';
+ const hint=mode==='manual'?(manualStart?'Elige la segunda ciudad para conectar.':'Pulsa dos ciudades para conectar; pulsa la arista para editar.') : !mode?'Elige un modo.':selected.length<5?`Selecciona ${5-selected.length} ciudad${selected.length===4?'':'es'} más en el mapa.`:mode==='random'?'Pulsa Aleatorio para generar otra red.':'';
  $('#mode-detail').textContent=hint;$('#mode-detail').hidden=!hint;
  $('#map-summary').textContent=`${selected.length}/10 ciudades`;
  $('#solve').disabled=selected.length<5||!mode;
@@ -79,11 +80,12 @@ function toggleCity(id){
 }
 function clickCity(id,event={}){
  if(event.shiftKey){toggleCity(id);return;}
- if(mode==='manual'&&selected.includes(id)&&selected.length>=5){
-  if(manualStart===id){manualStart=null;renderMap();return;}
-  if(!manualStart){manualStart=id;renderMap();return;}
-  const key=edgeKey(manualStart,id);invalidate();edges.has(key)?edges.delete(key):edges.add(key);manualStart=null;refresh();
- }else toggleCity(id);
+ if(mode!=='manual'){toggleCity(id);return;}
+ const next=manualClick(selected,edges,manualStart,id);
+ if(next.selected===selected){notice(next.message,true);return;}
+ invalidate();selected=next.selected;edges=next.edges;manualStart=next.start;
+ selected.sort((a,b)=>regions[region].cities.findIndex(c=>c.id===a)-regions[region].cities.findIndex(c=>c.id===b));
+ refresh();if(next.message)notice(next.message);
 }
 function renderMatrix(){
  const cs=chosen();$('#matrix-toggle').disabled=cs.length<5;
@@ -101,11 +103,12 @@ function editEdge(key,event){
  $('#edge-value').value=weights[key];$('#edge-error').textContent='';$('#edge-value').focus();$('#edge-value').select();
 }
 function renderReference(){
- const r=result?.reference,panel=$('#reference-panel');
- panel.hidden=!result?.lexicographic.length||!r?.missing.length;
+ const r=result?.improvement,panel=$('#reference-panel');
+ panel.hidden=!globalShown||!result?.lexicographic.length||!r?.missing.length||r.cost>=result.best;
  if(panel.hidden)return;
- panel.innerHTML=`<strong>Mejor circuito de referencia · ${fmt(r.cost)} M USD</strong><p>Agrega ${r.missing.length} ${r.missing.length===1?'conexión':'conexiones'} para completar el óptimo con costos predeterminados.</p><p>Con tus pesos modificados puede no ser el más barato.</p><button id="add-reference">Añadir conexiones sugeridas</button>`;
- $('#add-reference').onclick=()=>{const add=[...r.missing];invalidate();add.forEach(k=>edges.add(k));refresh();};
+ const route=decode(r.code,selected.length).map(i=>city(selected[i]).name).join(' → ');
+ panel.innerHTML=`<strong>Mejora disponible · ${fmt(r.cost)} M USD</strong><p>${route}</p><p>Conecta: ${r.missing.map(k=>k.split('|').map(id=>city(id).name).join(' ↔ ')).join('; ')}.</p><p>Ahorro: ${fmt(result.best-r.cost)} M USD con los pesos actuales.</p><button id="add-reference">Añadir aristas y ver nuevo óptimo</button>`;
+ $('#add-reference').onclick=()=>{const add=[...r.missing];invalidate();add.forEach(k=>edges.add(k));refresh();analyze('best');};
 }
 function setRegion(key){invalidate();region=key;selected=[];edges.clear();mode='';manualStart=null;defaultWeights=scenarioWeights(regions[key].cities);manualWeights={};weights=defaultWeights;transform=zoomIdentity;fitRequested=true;$('#region').value=key;$('#region-name').textContent=regions[key].name;refresh(false);}
 function analyze(action=null){
@@ -122,7 +125,7 @@ function analyze(action=null){
   result=data.result;job.terminate();worker=null;busy=false;$('#progress').hidden=true;const action=pendingAction;pendingAction=null;
   resultTab=result.lexicographic.length?'all':'current';renderCycle();renderNavigation();renderReference();renderMap();if(action)performAction(action);
  };
- job.onerror=()=>{if(worker!==job)return;invalidate();refresh(false);notice('No se pudo evaluar la red. Pulsa Encontrar ruta óptima para reintentar.',true);};
+ job.onerror=()=>{if(worker!==job)return;invalidate();refresh(false);notice('No se pudo evaluar la red. Modifica una conexión o recarga para reintentar.',true);};
  job.postMessage({cities:chosen(),edges:[...edges],matrix:chosen().map(a=>chosen().map(b=>cost(a,b))),referenceMatrix:chosen().map(a=>chosen().map(b=>a.id===b.id?0:defaultWeights[edgeKey(a.id,b.id)]))});
 }
 function performAction(action){
@@ -132,7 +135,7 @@ function performAction(action){
  else{renderCycle();renderNavigation();}
 }
 function recordVisit(idx){if(Number.isFinite(result.costs[idx]))bestVisited=Math.min(bestVisited,result.costs[idx]);}
-function showCycle(idx){if(!result||!Number.isFinite(result.costs[idx]))return;notice('');exploreMode=false;currentIndex=idx;currentRoute=routeCities(idx);recordVisit(idx);resultTab='current';renderCycle();renderNavigation();renderMap();}
+function showCycle(idx){if(!result||!Number.isFinite(result.costs[idx]))return;notice('');exploreMode=false;currentIndex=idx;currentRoute=routeCities(idx);recordVisit(idx);resultTab='current';renderCycle();renderNavigation();renderReference();renderMap();}
 function renderNavigation(){
  $('#solve').disabled=busy||!result?.lexicographic.length;
  $('#solve').title=busy?'Evaluando la red':result?.lexicographic.length?'Encontrar el ciclo de menor costo':'La red aún no tiene ciclos hamiltonianos';
@@ -144,7 +147,7 @@ function renderNavigation(){
 function renderCycle(){
  const panel=$('#cycle-content');$('#current-tab').setAttribute('aria-pressed',resultTab==='current');$('#routes-tab').setAttribute('aria-pressed',resultTab==='all');
  $('#cycle-title').textContent=exploreMode?'Paso a paso':'Tu recorrido';
- if(!result){panel.innerHTML=busy?'<div class="pending" aria-label="Evaluando recorridos"></div>':'<p class="no-cycle">Conecta tus ciudades para formar un circuito ferroviario.</p>';return;}
+ if(!result){panel.innerHTML=busy?'<div class="pending" aria-label="Evaluando recorridos"></div>':`<p class="no-cycle">${selected.length<5?'Incluye al menos 5 ciudades para buscar un circuito ferroviario.':'Conecta tus ciudades para formar un circuito ferroviario.'}</p>`;return;}
  if(!result.lexicographic.length){
   const pages=Math.ceil(result.suggestion.length/3),chunk=result.suggestion.slice(suggestionPage*3,suggestionPage*3+3);
   panel.innerHTML=`<p class="no-cycle">Faltan ${result.suggestion.length} enlace${result.suggestion.length===1?'':'s'} para completar un circuito.</p><div class="suggestions">${chunk.map(k=>k.split('|').map(id=>city(id).name).join(' ↔ ')).join('<br>')}</div><div class="pagination"><button id="suggest-prev" ${suggestionPage===0?'disabled':''} aria-label="Sugerencias anteriores">←</button><button id="add-suggestions">Añadir ${result.suggestion.length} enlace${result.suggestion.length===1?' mínimo':'s mínimos'}</button><button id="suggest-next" ${suggestionPage>=pages-1?'disabled':''} aria-label="Sugerencias siguientes">→</button></div>`;
@@ -152,7 +155,7 @@ function renderCycle(){
   $('#add-suggestions').onclick=()=>{const add=[...result.suggestion];invalidate();add.forEach(k=>edges.add(k));refresh();};return;
  }
  if(resultTab==='all'){
-  const ids=result.lexicographic,size=3,start=routePage*size;
+  const ids=result.lexicographic,size=Math.max(1,Math.floor((panel.clientHeight-34)/34));routePage=Math.min(routePage,Math.ceil(ids.length/size)-1);const start=routePage*size;
   panel.innerHTML=`<div class="routes-list">${Array.from(ids.slice(start,start+size)).map((idx,i)=>`<button data-route="${idx}" title="${routeCities(idx).map(c=>c.name).join(' → ')}"><span>${start+i+1}. ${decode(result.codes[idx],selected.length).map(i=>i+1).join('–')}</span><b>${fmt(result.costs[idx])}</b></button>`).join('')}</div><div class="pagination"><button id="route-prev" ${routePage===0?'disabled':''} aria-label="Página anterior de ciclos">←</button><span>${routePage+1}/${Math.ceil(ids.length/size)}</span><button id="route-next" ${(routePage+1)*size>=ids.length?'disabled':''} aria-label="Página siguiente de ciclos">→</button></div>`;
   $$('[data-route]').forEach(b=>b.onclick=()=>showCycle(+b.dataset.route));$('#route-prev').onclick=()=>{routePage--;renderCycle();};$('#route-next').onclick=()=>{routePage++;renderCycle();};return;
  }
@@ -386,7 +389,7 @@ function renderMap() {
       edgeLabels.push({element:label,x1,y1,x2,y2});
     }
   }
-  const proposed=result?.lexicographic.length?result?.reference?.missing:result?.suggestion;
+  const proposed=globalShown&&result?.improvement?.cost<result?.best?result.improvement.missing:[];
   for(const key of proposed||[]){
     const [a,b]=key.split('|').map(city),[x1,y1]=projection([a.lon,a.lat]),[x2,y2]=projection([b.lon,b.lat]);
     svgEl('line',{x1,y1,x2,y2,stroke:'#fcba15','stroke-width':2,'stroke-dasharray':'6 5','vector-effect':'non-scaling-stroke','pointer-events':'none'},viewport);
@@ -567,12 +570,12 @@ function hideTip() {
 }
 const helpSections=[
  ['La red ferroviaria','Buscamos el circuito más barato que visite todas tus ciudades y regrese al inicio. Cada mapa conserva sus 20 ciudades; selecciona entre 5 y 10 directamente en el mapa.'],
- ['Construir y limpiar','Elige primero un modo. Manual: selecciona las ciudades y luego pulsa dos ciudades elegidas para añadir o quitar su enlace. Conectar todo une cada pareja; Aleatorio crea enlaces con probabilidad 50 %. Mayús + clic permite quitar una ciudad en cualquier modo. La papelera limpia todo el mapa.'],
+ ['Construir y limpiar','Elige primero un modo. Manual: cada pareja de clics en ciudades distintas crea una conexión, desde la segunda ciudad. Una conexión existente no se duplica ni se elimina al repetirla. Pulsa cualquier parte de la arista para editar o eliminar. Conectar todo une cada pareja; Aleatorio crea enlaces con probabilidad 50 %. Mayús + clic permite quitar una ciudad en cualquier modo. La papelera limpia todo el mapa.'],
  ['Costos','El costo por defecto es de 1 a 90 millones de dólares simulados. Solo en Manual puedes cambiarlo por un entero entre 1 y 99 pulsando su peso en el mapa. Al cambiar de modo se usan los costos por defecto; tus cambios se recuperan al volver a Manual. Combinamos distancia, un factor simulado de dificultad por corredor y una inversión fija. Los parámetros son reproducibles: no cambian al pulsar Aleatorio ni se ajustan para forzar un recorrido ganador. No son presupuestos ferroviarios reales.'],
  ['Matriz','Los números de fila y columna corresponden a las ciudades numeradas del mapa. Cada valor es el costo de viajar entre ambas. Una casilla carbón significa misma ciudad o ausencia de conexión. El botón Ver matriz abre una consulta de la red desde cinco ciudades. Edita los pesos y elimina conexiones pulsando sus etiquetas en el mapa.'],
  ['Fuerza bruta','Fijamos la primera ciudad del orden del catálogo y enumeramos las permutaciones en orden lexicográfico. Comprobamos cada enlace, incluido el regreso; sumamos los costos y comparamos. Una ruta y su inversa se cuentan una sola vez.'],
  ['Exploración','Al conectar tu red evaluamos sus ciclos en segundo plano. Si hay ciclos, puedes usar Siguiente ciclo o Siguiente paso directamente. Las cuatro fases son generar, comprobar, sumar y comparar. Mejor visitado conserva el mínimo de los ciclos que ya has visto, incluso al retroceder. Encontrar ruta óptima revela el mínimo global.'],
- ['Cantidad de ciclos y reparación','En un grafo completo hay (n − 1)! / 2 ciclos únicos: 12 con cinco ciudades y 181 440 con diez. Si no hay un ciclo válido, proponemos el menor número de enlaces nuevos que permita formar uno. La sugerencia minimiza cantidad de aristas, no inversión.'],
+ ['Cantidad de ciclos y reparación','En un grafo completo hay (n − 1)! / 2 ciclos únicos: 12 con cinco ciudades y 181 440 con diez. Si no hay un ciclo válido, proponemos el menor número de enlaces nuevos que permita formar uno. La reparación minimiza primero la cantidad de aristas y desempata por el menor costo total del circuito. Después de buscar el óptimo actual, se propone una mejora con pesos vigentes si existe; al aceptarla se muestra el nuevo óptimo.'],
  ['Datos y controles','Cartografía y ciudades: Natural Earth. D3 dibuja el mapa; la búsqueda exhaustiva es código propio y se ejecuta en un Web Worker. La rueda sobre el mapa controla el zoom. Fuera del mapa, el scroll permite pasar entre portada y planificador.']
 ];
 function renderHelp(){const [title,text]=helpSections[helpPage];$('#help-content').innerHTML=`<h3>${title}</h3><p>${text}</p>`;$('#help-page').textContent=`${helpPage+1}/${helpSections.length}`;$('#help-prev').disabled=helpPage===0;$('#help-next').disabled=helpPage===helpSections.length-1;}
@@ -606,7 +609,7 @@ $('#close-help').onclick=()=>{$('#help-popover').hidden=true;$('#help').setAttri
 $('#help-prev').onclick=()=>{helpPage--;renderHelp();};$('#help-next').onclick=()=>{helpPage++;renderHelp();};
 $('#zoom-in').onclick=()=>{if(zoomBehavior)select($('#map')).call(zoomBehavior.scaleBy,1.4);};$('#zoom-out').onclick=()=>{if(zoomBehavior)select($('#map')).call(zoomBehavior.scaleBy,1/1.4);};$('#zoom-reset').onclick=()=>{fitRequested=true;renderMap();};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('#edge-editor').hidden=true;editingEdge=null;$('#help-popover').hidden=true;$('#help').setAttribute('aria-expanded','false');manualStart=null;if(world)renderMap();}});
-let resizeTimer;new ResizeObserver(()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(world)renderMap();},100);}).observe($('.map-wrap'));
+let resizeTimer;new ResizeObserver(()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(world){renderMap();if(resultTab==='all')renderCycle();}},100);}).observe($('.map-wrap'));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelAnimationFrame(trainFrame);else if(world&&document.body.classList.contains('planning'))renderMap();});
 try{
  [regions,world,subdivisions]=await Promise.all(['/data/cities.json','/data/world.geojson','/data/subdivisions.geojson'].map(async u=>{const r=await fetch(u);if(!r.ok)throw Error(`No se pudo cargar ${u}`);return r.json();}));

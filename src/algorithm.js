@@ -27,7 +27,8 @@ export function factorial(n) {
 }
 /** Exhaustive permutation enumeration, fixed origin and reversed-cycle deduplication.
  * No heuristic or library solver: all canonical permutations are evaluated.
- * O(n * (n-1)!) time; stores a compact trace so every attempted cycle is inspectable. */
+ * Enumeration O(n*C), sorting O(V*log(V)), C=(n-1)!/2, V=valid cycles.
+ * Stores a compact trace so every attempted cycle is inspectable. */
 export function solve(cities, edgeList, onProgress = () => {}, weightMatrix = null, referenceMatrix = null) {
   const n = cities.length;
   if (n < 5 || n > 10) throw Error("Selecciona entre 5 y 10 ciudades.");
@@ -41,9 +42,11 @@ export function solve(cities, edgeList, onProgress = () => {}, weightMatrix = nu
     throw Error('La matriz debe ser finita, no negativa y simétrica.');
   const perm = Array.from({ length: n - 1 }, (_, i) => i + 1);
   const reference = { cost: Infinity, code: null, missing: [] };
+  const improvement = { cost: Infinity, code: null, missing: [] };
   let count = 0,
     best = Infinity,
     minMissing = Infinity,
+    repairCost = Infinity,
     suggestion = [],
     valid = [];
   function evaluate() {
@@ -59,6 +62,9 @@ export function solve(cities, edgeList, onProgress = () => {}, weightMatrix = nu
       prev = next;
     }
     for (const p of perm) code = code * 10 + p;
+    if (cost < improvement.cost || (cost === improvement.cost && missing.length < improvement.missing.length)) {
+      improvement.cost = cost; improvement.code = code; improvement.missing = [...missing];
+    }
     if (referenceMatrix) {
       const route = [0, ...perm, 0];
       const value = route.slice(1).reduce((sum, next, i) => sum + referenceMatrix[route[i]][next], 0);
@@ -71,8 +77,9 @@ export function solve(cities, edgeList, onProgress = () => {}, weightMatrix = nu
       costs[count] = cost;
       valid.push(count);
       best = Math.min(best, cost);
-    } else if (missing.length < minMissing) {
+    } else if (missing.length < minMissing || (missing.length === minMissing && cost < repairCost)) {
       minMissing = missing.length;
+      repairCost = cost;
       suggestion = missing;
     }
     count++;
@@ -112,5 +119,7 @@ export function solve(cities, edgeList, onProgress = () => {}, weightMatrix = nu
     matrix,
     total,
     reference: referenceMatrix ? reference : null,
+    improvement,
+    repairCost: valid.length ? null : repairCost,
   };
 }
