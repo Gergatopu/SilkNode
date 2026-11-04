@@ -14,6 +14,17 @@ const data = JSON.parse(
 const cities = data.peru.cities.slice(0, 5);
 const complete = (cs) =>
   cs.flatMap((a, i) => cs.slice(i + 1).map((b) => edgeKey(a.id, b.id)));
+test('reference optimum remains independent of edits and suggests missing edges',()=>{
+ const reference=Array.from({length:5},(_,i)=>Array.from({length:5},(_,j)=>i===j?0:(Math.abs(i-j)===1||Math.abs(i-j)===4)?1:20));
+ const path=[0,2,4,1,3,0], edges=path.slice(1).map((v,i)=>edgeKey(cities[path[i]].id,cities[v].id));
+ const edited=reference.map(row=>row.map(v=>v?99:0));
+ const r=solve(cities,edges,()=>{},edited,reference);
+ assert.equal(r.best,495);assert.equal(r.reference.cost,5);assert.equal(r.reference.missing.length,5);
+ const repaired=solve(cities,[...edges,...r.reference.missing],()=>{},edited,reference);
+ assert.equal(repaired.reference.missing.length,0);
+ const tied=reference.map((row,i)=>row.map((_,j)=>i===j?0:1));
+ assert.equal(solve(cities,edges,()=>{},edited,tied).reference.missing.length,0);
+});
 function independent(cs, edges) {
   const allowed = new Set(edges),
     others = cs.slice(1);

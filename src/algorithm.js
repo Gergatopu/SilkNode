@@ -28,7 +28,7 @@ export function factorial(n) {
 /** Exhaustive permutation enumeration, fixed origin and reversed-cycle deduplication.
  * No heuristic or library solver: all canonical permutations are evaluated.
  * O(n * (n-1)!) time; stores a compact trace so every attempted cycle is inspectable. */
-export function solve(cities, edgeList, onProgress = () => {}, weightMatrix = null) {
+export function solve(cities, edgeList, onProgress = () => {}, weightMatrix = null, referenceMatrix = null) {
   const n = cities.length;
   if (n < 5 || n > 10) throw Error("Selecciona entre 5 y 10 ciudades.");
   const edges = new Set(edgeList),
@@ -40,6 +40,7 @@ export function solve(cities, edgeList, onProgress = () => {}, weightMatrix = nu
   if (matrix.length !== n || matrix.some((row, i) => row.length !== n || row.some((v, j) => !Number.isFinite(v) || v < 0 || Math.abs(v - matrix[j]?.[i]) > 1e-7)))
     throw Error('La matriz debe ser finita, no negativa y simétrica.');
   const perm = Array.from({ length: n - 1 }, (_, i) => i + 1);
+  const reference = { cost: Infinity, code: null, missing: [] };
   let count = 0,
     best = Infinity,
     minMissing = Infinity,
@@ -58,6 +59,13 @@ export function solve(cities, edgeList, onProgress = () => {}, weightMatrix = nu
       prev = next;
     }
     for (const p of perm) code = code * 10 + p;
+    if (referenceMatrix) {
+      const route = [0, ...perm, 0];
+      const value = route.slice(1).reduce((sum, next, i) => sum + referenceMatrix[route[i]][next], 0);
+      if (value < reference.cost || (value === reference.cost && missing.length < reference.missing.length)) {
+        reference.cost = value; reference.code = code; reference.missing = [...missing];
+      }
+    }
     codes[count] = code;
     if (!missing.length) {
       costs[count] = cost;
@@ -103,5 +111,6 @@ export function solve(cities, edgeList, onProgress = () => {}, weightMatrix = nu
     suggestion: valid.length ? [] : suggestion,
     matrix,
     total,
+    reference: referenceMatrix ? reference : null,
   };
 }

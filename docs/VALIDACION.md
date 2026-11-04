@@ -1,5 +1,9 @@
 # Validación de la interfaz simplificada
 
+## Actualización del 4 de noviembre: trabajo dentro del grafo
+
+Esta versión sustituye la matriz editable permanente descrita en las comprobaciones históricas siguientes. Ahora se consulta mediante Ver matriz y los pesos se editan en el mapa. Se comprobaron en navegador: selección manual y creación de un anillo; botón deshabilitado sin ciclos; botón habilitado verde con ciclos; apertura del editor por clic y teclado; edición a 99 reflejada en ambas celdas de consulta; eliminación de arista; sugerencia del óptimo de referencia de 125 M USD y reincorporación de su enlace faltante. Sin errores de consola. Captura: `.impeccable/review/graph-workspace.png`. Las 17 pruebas automatizadas aprobaron, incluida independencia entre costos editados y referencia, reparación de referencia y desempate por menor número de aristas faltantes. Compilación aprobada. Revisión visual limitada a computadora; los resultados previos se conservan como historial.
+
 Revisión inicial: 30 de octubre de 2026. Actualización documental: 2 de noviembre de 2026. Alcance: PC; versión publicada por el usuario en https://silk-node.vercel.app/.
 
 ## Pruebas automatizadas

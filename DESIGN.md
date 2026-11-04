@@ -9,6 +9,8 @@ colors:
   background: "#ffffff"
   line: "#d9e1e3"
   muted: "#526268"
+  success: "#278249"
+  successHover: "#1d6b3a"
 typography:
   display:
     fontFamily: "League Spartan, sans-serif"
@@ -22,6 +24,7 @@ typography:
     fontFamily: "League Spartan, sans-serif"
     fontWeight: 600
 rounded:
+  overlay: "12px"
   input: "8px"
   button: "10px"
   action: "18px"
@@ -63,7 +66,7 @@ League Spartan se incluye localmente en pesos 400, 600, 700 y 800. El título de
 
 Interfaz destinada a PC. Portada y planificador ocupan cada uno `100dvh`, sin scroll de página ni paneles. La transición desplaza las pantallas verticalmente; la rueda fuera del mapa permite alternarlas y dentro controla el zoom.
 
-Controles, matriz cuadrada y recorrido permanecen en la izquierda; mapa dominante y navegación de ciclos, en la derecha. La columna izquierda usa `clamp(300px,28vw,400px)`, con separación de 28 px. Hasta 750 px de alto se reduce el espaciado manteniendo la composición. No hay vistas móviles ni listas para elegir ciudades: toda selección ocurre en el mapa. Ciclos, sugerencias y ayuda se paginan.
+El mapa ocupa el espacio completo. Controles y resultados se agrupan dentro del mapa a la izquierda; recomendaciones abajo a la derecha y navegación en su borde inferior. Matriz opcional en diálogo de consulta. Ciclos, sugerencias y ayuda se paginan. Diseño para PC.
 
 ## Elevation & Depth
 
@@ -77,15 +80,15 @@ Botones y campos redondeados, mapa con esquinas amplias y controles de informaci
 
 Las acciones principales son amarillas; los tres modos de red, carbón, con selección turquesa. Foco visible turquesa, estados deshabilitados atenuados y pulsación con desplazamiento mínimo. El selector de mapa es el único campo de selección del panel.
 
-La matriz cuadrada aparece desde cinco ciudades y usa cifras tabulares en negrita. Diagonal y enlaces ausentes se dibujan como casillas oscuras vacías, sin cero ni guion; conservan etiquetas accesibles. En Manual, las casillas fuera de la diagonal permiten activar enlaces y editar costos entre 1 y 99. Los enlaces activos tienen fondo claro y ambas casillas simétricas muestran el mismo valor. El recorrido muestra ciudades, suma, mejor visitado y avance manual por pasos. El mapa conserva pesos visibles y enfatiza el ciclo activo en rojo. La papelera limpia selección, enlaces y costos personalizados.
+La matriz es una consulta opcional desde cinco ciudades. La edición se hace pulsando los pesos del mapa. El botón de búsqueda permanece visible: atenuado sin ciclos y verde con ciclos. Las sugerencias se representan con líneas discontinuas amarillas.
 
 La ayuda se integra en el mapa. La transición de entrada dura 0,7 s y las figuras tienen movimiento lento; movimiento reducido elimina transición y animación decorativa. Las figuras se pausan dentro del planificador.
 
 ## Do's and Don'ts
 
 - Mantener la referencia visual aprobada, League Spartan local y foco visible.
-- Mantener matriz y recorrido simultáneos a la izquierda en PC.
+- Mantener controles y resultados dentro del mapa; matriz solo a petición.
 - Conservar el mapa como único lugar para seleccionar ciudades.
-- No reintroducir controles retirados: archivos, listas de ciudades, modos de costo, reproducción, velocidad ni vistas móviles. La edición de costos se limita a la matriz en Manual.
+- No reintroducir controles retirados: archivos, listas de ciudades, modos de costo, reproducción, velocidad ni vistas móviles. La edición de costos ocurre sobre las aristas en Manual.
 - No introducir scroll, pixel-art, fuentes remotas ni ventanas grandes que oculten el trabajo.
 - No presentar costos simulados como inversión ferroviaria real.

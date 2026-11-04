@@ -21,19 +21,17 @@ Ejecutar `npm run build` después de cualquier cambio. La carpeta `dist` resulta
 
 ## Uso en computadora
 
-1. Pulsar **Empezar** y elegir un mapa: China, Europa, Estados Unidos, Rusia o Perú. Cada escenario conserva sus 20 ciudades originales.
-2. Elegir **Manual**, **Conectar todo** o **Aleatorio** antes de seleccionar ciudades.
-3. Seleccionar individualmente 5–10 ciudades **en el mapa**. Conectar todo genera todos los enlaces al completar la selección mínima y actualiza la red al cambiarla. Aleatorio genera cada par con probabilidad del 50 %; pulsarlo otra vez regenera los enlaces, manteniendo los costos. No garantiza un ciclo.
-4. La matriz aparece al seleccionar al menos cinco ciudades. En Manual, pulsar una casilla oscura fuera de la diagonal activa el enlace con su costo por defecto: ambas casillas simétricas cambian de color y muestran el mismo valor. Escribir un entero entre **1 y 99** para modificarlo; el mapa y el cálculo se actualizan juntos. También se puede pulsar dos ciudades elegidas para crear o quitar su enlace. Mayús + clic quita una ciudad; la papelera limpia selección, enlaces y costos personalizados.
-5. La red se evalúa automáticamente tras los cambios. Cuando existen ciclos, se habilitan su navegación, la lista **Todos** y **Siguiente paso**. Este último explica Generar → Comprobar → Sumar → Comparar, con avance y retroceso manuales.
-6. Pulsar **Encontrar ruta óptima** para revelar el mínimo global. Anterior/siguiente y la lista recorren ciclos válidos en orden lexicográfico; el mejor visitado conserva su valor al retroceder.
-7. Si no hay ciclo, añadir el conjunto mínimo de enlaces sugerido. La aplicación vuelve a evaluar la red.
+1. Pulsar **Empezar**, elegir escenario y modo. Seleccionar 5–10 de las 20 ciudades en el mapa.
+2. En **Manual**, pulsar dos ciudades seleccionadas para crear o quitar su conexión. Al crearla aparece el costo predeterminado.
+3. Pulsar el peso de una arista para editarlo (entero 1–99), guardar, cancelar o eliminar la conexión. Mayús + clic elimina una ciudad.
+4. **Conectar todo** une cada pareja. **Aleatorio** regenera conexiones sin garantizar un ciclo y sin cambiar sus costos predeterminados.
+5. El botón **Encontrar ruta óptima** siempre permanece visible. Está atenuado mientras no haya ciclos o se esté evaluando; se habilita en verde cuando existe al menos uno.
+6. La lista **Todos** muestra los ciclos disponibles con paginación. La navegación y el paso a paso permanecen dentro del mapa.
+7. Si no hay ciclos, las líneas discontinuas sugieren el mínimo número de conexiones para formar uno. Si hay ciclos pero falta el óptimo de referencia, se sugieren las conexiones para completarlo.
+8. La referencia compara todas las conexiones posibles de las mismas ciudades usando exclusivamente los costos predeterminados. Entre óptimos empatados se elige el que requiere menos enlaces nuevos. No sobrescribe pesos editados; por eso puede diferir del mínimo con costos personalizados.
+9. **Ver matriz** abre una consulta simétrica de los costos actuales, sin edición. La papelera limpia la sesión.
 
-La matriz cuadrada y el recorrido permanecen a la izquierda; mapa y navegación, a la derecha. La matriz se oculta de nuevo si quedan menos de cinco ciudades. La diagonal y los enlaces ausentes son casillas oscuras vacías. Solo Manual permite editar costos; una entrada inválida restaura el último valor válido al salir de la casilla.
-
-Portada y planificador ocupan una pantalla cada uno, sin scroll. La rueda fuera del mapa cambia entre ambas pantallas; dentro del mapa controla el zoom. El logotipo vuelve al inicio. La ayuda matemática está en el botón de información del mapa. Se respeta movimiento reducido.
-
-La aplicación está destinada a PC. No dispone de guardado, importación, exportación, cuentas ni servidor de datos. Recargar pierde la red; cambiar de escenario limpia selección y enlaces. Editar la red invalida resultados anteriores.
+Interfaz para PC, sin scroll de página. Controles, resultados y operaciones están dentro del mapa; la matriz solo aparece al solicitarla. La sesión no se guarda ni exporta. Cambiar de escenario o recargar limpia la red.
 
 ## Costos y algoritmo
 

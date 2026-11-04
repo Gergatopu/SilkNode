@@ -31,6 +31,14 @@ $('#app').innerHTML=`<main id="screens">
 <div class="map-footer"><span id="map-summary">0/10 ciudades</span><span><i></i> Circuito activo</span></div></div>
 <div class="route-navigation"><button id="prev" disabled>← Ciclo anterior</button><span id="cycle-count"></span><button id="next" disabled>Siguiente ciclo →</button></div>
 </div></div></section></main>`;
+// Keep every planning control inside the graph surface.
+$('.map-wrap').append($('.sidebar'),$('.route-navigation'));
+$('.matrix-panel').remove();
+$('.map-wrap').insertAdjacentHTML('beforeend', `<button id="matrix-toggle" class="matrix-toggle" disabled>Ver matriz</button>
+<dialog id="matrix-dialog"><div class="panel-title"><h2>Matriz de costos</h2><button id="matrix-close" aria-label="Cerrar matriz">×</button></div><p>Consulta de la red · M USD simulados</p><div id="matrix-content"></div></dialog>
+<form id="edge-editor" class="edge-editor" hidden><strong id="edge-title"></strong><label>Costo · M USD<input id="edge-value" inputmode="numeric" maxlength="2" required pattern="[1-9][0-9]?" aria-label="Costo de la conexión"></label><div><button type="submit">Guardar</button><button type="button" id="edge-delete">Eliminar conexión</button><button type="button" id="edge-cancel">Cancelar</button></div><p id="edge-error" role="alert"></p></form>
+<section id="reference-panel" class="reference-panel" hidden></section>`);
+let editingEdge=null;
 let regions,world,subdivisions,region='china',selected=[],edges=new Set(),mode='';
 let weights={},defaultWeights={},manualWeights={},seed=1,result=null,worker=null,busy=false,analysisTimer=null,currentRoute=null,currentIndex=null,manualStart=null,trainFrame=null;
 let bestVisited=Infinity,globalShown=false,exploreMode=false,step=0,phase=-1,routePage=0,resultTab='current',suggestionPage=0,helpPage=0,pendingAction=null;
@@ -45,6 +53,7 @@ let noticeTimer;
 function notice(text,error=false){clearTimeout(noticeTimer);$('#notice').textContent=text;$('#notice').hidden=!text;$('#notice').classList.toggle('error',error);if(text&&!error)noticeTimer=setTimeout(()=>$('#notice').hidden=true,3200);}
 function invalidate(){
  clearTimeout(analysisTimer);worker?.terminate();worker=null;busy=false;result=null;currentRoute=null;currentIndex=null;bestVisited=Infinity;globalShown=false;exploreMode=false;phase=-1;step=0;routePage=0;suggestionPage=0;pendingAction=null;
+ $('#edge-editor').hidden=true;editingEdge=null;$('#reference-panel').hidden=true;
  cancelAnimationFrame(trainFrame);$('#progress').hidden=true;notice('');
 }
 function complete(){edges.clear();for(let i=0;i<selected.length;i++)for(let j=i+1;j<selected.length;j++)edges.add(edgeKey(selected[i],selected[j]));}
@@ -54,7 +63,7 @@ function refresh(schedule=true){
  if(!regions)return;
  weights=mode==='manual'?{...defaultWeights,...manualWeights}:defaultWeights;
  for(const [id,value] of [['manual','manual'],['connect','all'],['random-edges','random']]){$('#'+id).classList.toggle('active',mode===value);$('#'+id).setAttribute('aria-pressed',mode===value);}
- const hint=!mode?'Elige un modo.':selected.length<5?`Selecciona ${5-selected.length} ciudad${selected.length===4?'':'es'} más en el mapa.`:mode==='manual'?'Pulsa una casilla para conectar y editar su costo (1–99).':mode==='random'?'Pulsa Aleatorio para generar otra red.':'';
+ const hint=!mode?'Elige un modo.':selected.length<5?`Selecciona ${5-selected.length} ciudad${selected.length===4?'':'es'} más en el mapa.`:mode==='manual'?'Conecta dos ciudades; pulsa el peso para editarlo (1–99).':mode==='random'?'Pulsa Aleatorio para generar otra red.':'';
  $('#mode-detail').textContent=hint;$('#mode-detail').hidden=!hint;
  $('#map-summary').textContent=`${selected.length}/10 ciudades`;
  $('#solve').disabled=selected.length<5||!mode;
@@ -77,41 +86,26 @@ function clickCity(id,event={}){
  }else toggleCity(id);
 }
 function renderMatrix(){
- const cs=chosen(),panel=$('.matrix-panel');
- panel.hidden=cs.length<5;
- // Keep the reserved row so the results panel does not jump before selection.
- if(cs.length<5){$('#matrix-content').replaceChildren();return;}
- $('#matrix-content').innerHTML=`<table class="matrix"><thead><tr><th aria-label="Ciudad"></th>${cs.map((c,i)=>`<th title="${c.name}">${i+1}</th>`).join('')}</tr></thead><tbody>${cs.map((a,i)=>`<tr><th title="${a.name}">${i+1}</th>${cs.map((b,j)=>{
-  const key=edgeKey(a.id,b.id),filled=i!==j&&edges.has(key),label=`${a.name} a ${b.name}`;
-  let content=filled?cost(a,b):'';
-  if(mode==='manual'&&i!==j)content=`<input class="matrix-cost" data-cost="${key}" aria-label="Costo ${label}" inputmode="numeric" maxlength="2" value="${filled?cost(a,b):''}" autocomplete="off" spellcheck="false">`;
-  return `<td class="${filled?'connected':'unavailable'}" title="${label}${i===j?': misma ciudad':filled?': costo en M USD':': sin enlace'}">${content}</td>`;
- }).join('')}</tr>`).join('')}</tbody></table>`;
- // Keep the same input mounted when creating an edge: replacing the focused
- // cell here can discard the user's first keystroke or leave an empty hit area.
- function updateCost(input,value){
-  const key=input.dataset.cost;
-  if(edges.has(key)&&weights[key]===value){notice('');return;}
-  invalidate();edges.add(key);manualStart=null;manualWeights[key]=value;weights[key]=value;
-  $$('[data-cost]').filter(other=>other.dataset.cost===key).forEach(other=>{
-   other.value=String(value);other.setAttribute('aria-invalid','false');
-   other.closest('td').className='connected';
-   other.closest('td').title=other.getAttribute('aria-label').replace(/^Costo /,'')+': costo en M USD';
-  });
-  renderCycle();renderNavigation();renderMap();
-  analysisTimer=setTimeout(()=>analyze(),140);
- }
- $$('[data-cost]').forEach(input=>{
-  input.onfocus=()=>{if(!edges.has(input.dataset.cost))updateCost(input,weights[input.dataset.cost]);input.select();};
-  input.oninput=()=>{
-   const valid=/^[1-9][0-9]?$/.test(input.value);
-   input.setAttribute('aria-invalid',String(!valid));
-   if(!valid){notice('Introduce un número entero entre 1 y 99.',true);return;}
-   updateCost(input,Number(input.value));
-  };
-  input.onblur=()=>{if(!/^[1-9][0-9]?$/.test(input.value)){input.value=String(weights[input.dataset.cost]);input.setAttribute('aria-invalid','false');notice('Se conservó el último costo válido (1–99).');}};
-  input.onkeydown=e=>{if(e.key==='Enter'||e.key==='Escape'){e.preventDefault();input.blur();}};
- });
+ const cs=chosen();$('#matrix-toggle').disabled=cs.length<5;
+ if(cs.length<5){$('#matrix-dialog').close();$('#matrix-content').replaceChildren();return;}
+ $('#matrix-content').innerHTML='<table class="matrix"><thead><tr><th></th>'+cs.map((c,i)=>`<th title="${c.name}">${i+1}</th>`).join('')+'</tr></thead><tbody>'+cs.map((a,i)=>'<tr><th title="'+a.name+'">'+(i+1)+'</th>'+cs.map((b,j)=>`<td class="${i===j||!edges.has(edgeKey(a.id,b.id))?'unavailable':'connected'}" title="${a.name} a ${b.name}">${i!==j&&edges.has(edgeKey(a.id,b.id))?cost(a,b):''}</td>`).join('')+'</tr>').join('')+'</tbody></table>';
+}
+function editEdge(key,event){
+ if(mode!=='manual')return;
+ event?.stopPropagation();hideTip();editingEdge=key;
+ const [a,b]=key.split('|').map(city),box=$('.map-wrap').getBoundingClientRect();
+ $('#edge-title').textContent=a.name+' ↔ '+b.name;
+ const panel=$('#edge-editor');panel.hidden=false;
+ panel.style.left=Math.max(330,Math.min((event?.clientX||box.left+box.width/2)-box.left,box.width-340))+'px';
+ panel.style.top=Math.max(12,Math.min((event?.clientY||box.top+box.height/2)-box.top,box.height-210))+'px';
+ $('#edge-value').value=weights[key];$('#edge-error').textContent='';$('#edge-value').focus();$('#edge-value').select();
+}
+function renderReference(){
+ const r=result?.reference,panel=$('#reference-panel');
+ panel.hidden=!result?.lexicographic.length||!r?.missing.length;
+ if(panel.hidden)return;
+ panel.innerHTML=`<strong>Mejor circuito de referencia · ${fmt(r.cost)} M USD</strong><p>Agrega ${r.missing.length} ${r.missing.length===1?'conexión':'conexiones'} para completar el óptimo con costos predeterminados.</p><p>Con tus pesos modificados puede no ser el más barato.</p><button id="add-reference">Añadir conexiones sugeridas</button>`;
+ $('#add-reference').onclick=()=>{const add=[...r.missing];invalidate();add.forEach(k=>edges.add(k));refresh();};
 }
 function setRegion(key){invalidate();region=key;selected=[];edges.clear();mode='';manualStart=null;defaultWeights=scenarioWeights(regions[key].cities);manualWeights={};weights=defaultWeights;transform=zoomIdentity;fitRequested=true;$('#region').value=key;$('#region-name').textContent=regions[key].name;refresh(false);}
 function analyze(action=null){
@@ -126,10 +120,10 @@ function analyze(action=null){
   if(data.type==='progress'){$('#progress').value=data.done/data.total*100;return;}
   if(data.type==='error'){invalidate();refresh(false);notice(data.message,true);return;}
   result=data.result;job.terminate();worker=null;busy=false;$('#progress').hidden=true;const action=pendingAction;pendingAction=null;
-  renderCycle();renderNavigation();if(action)performAction(action);
+  resultTab=result.lexicographic.length?'all':'current';renderCycle();renderNavigation();renderReference();renderMap();if(action)performAction(action);
  };
  job.onerror=()=>{if(worker!==job)return;invalidate();refresh(false);notice('No se pudo evaluar la red. Pulsa Encontrar ruta óptima para reintentar.',true);};
- job.postMessage({cities:chosen(),edges:[...edges],matrix:chosen().map(a=>chosen().map(b=>cost(a,b)))});
+ job.postMessage({cities:chosen(),edges:[...edges],matrix:chosen().map(a=>chosen().map(b=>cost(a,b))),referenceMatrix:chosen().map(a=>chosen().map(b=>a.id===b.id?0:defaultWeights[edgeKey(a.id,b.id)]))});
 }
 function performAction(action){
  if(action==='best'&&result?.sorted.length){globalShown=true;fitRequested=true;showCycle(result.sorted[0]);}
@@ -140,6 +134,8 @@ function performAction(action){
 function recordVisit(idx){if(Number.isFinite(result.costs[idx]))bestVisited=Math.min(bestVisited,result.costs[idx]);}
 function showCycle(idx){if(!result||!Number.isFinite(result.costs[idx]))return;notice('');exploreMode=false;currentIndex=idx;currentRoute=routeCities(idx);recordVisit(idx);resultTab='current';renderCycle();renderNavigation();renderMap();}
 function renderNavigation(){
+ $('#solve').disabled=busy||!result?.lexicographic.length;
+ $('#solve').title=busy?'Evaluando la red':result?.lexicographic.length?'Encontrar el ciclo de menor costo':'La red aún no tiene ciclos hamiltonianos';
  const ids=result?.lexicographic,pos=ids?ids.indexOf(currentIndex):-1;
  $('#prev').disabled=!ids||pos<=0;$('#next').disabled=!ids?.length||pos>=ids.length-1;
  $('#routes-tab').disabled=!ids?.length;
@@ -148,7 +144,7 @@ function renderNavigation(){
 function renderCycle(){
  const panel=$('#cycle-content');$('#current-tab').setAttribute('aria-pressed',resultTab==='current');$('#routes-tab').setAttribute('aria-pressed',resultTab==='all');
  $('#cycle-title').textContent=exploreMode?'Paso a paso':'Tu recorrido';
- if(!result){panel.innerHTML=busy?'<div class="pending" aria-label="Evaluando recorridos"></div>':'';return;}
+ if(!result){panel.innerHTML=busy?'<div class="pending" aria-label="Evaluando recorridos"></div>':'<p class="no-cycle">Conecta tus ciudades para formar un circuito ferroviario.</p>';return;}
  if(!result.lexicographic.length){
   const pages=Math.ceil(result.suggestion.length/3),chunk=result.suggestion.slice(suggestionPage*3,suggestionPage*3+3);
   panel.innerHTML=`<p class="no-cycle">Faltan ${result.suggestion.length} enlace${result.suggestion.length===1?'':'s'} para completar un circuito.</p><div class="suggestions">${chunk.map(k=>k.split('|').map(id=>city(id).name).join(' ↔ ')).join('<br>')}</div><div class="pagination"><button id="suggest-prev" ${suggestionPage===0?'disabled':''} aria-label="Sugerencias anteriores">←</button><button id="add-suggestions">Añadir ${result.suggestion.length} enlace${result.suggestion.length===1?' mínimo':'s mínimos'}</button><button id="suggest-next" ${suggestionPage>=pages-1?'disabled':''} aria-label="Sugerencias siguientes">→</button></div>`;
@@ -180,8 +176,8 @@ function fitCities() {
   const points=(selected.length>=5?chosen():regions[region].cities).map(c=>projection([c.lon,c.lat]));
   const xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
   const left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys);
-  const k=Math.max(.7,Math.min(7,(mapWidth-100)/Math.max(1,right-left),(mapHeight-150)/Math.max(1,bottom-top)));
-  transform=zoomIdentity.translate(mapWidth/2-k*(left+right)/2,mapHeight/2+10-k*(top+bottom)/2).scale(k);
+  const k=Math.max(.7,Math.min(7,(mapWidth-440)/Math.max(1,right-left),(mapHeight-150)/Math.max(1,bottom-top)));
+  transform=zoomIdentity.translate((mapWidth+320)/2-k*(left+right)/2,mapHeight/2+10-k*(top+bottom)/2).scale(k);
   fitRequested=false;
 }
 function layoutLabels() {
@@ -362,6 +358,7 @@ function renderMap() {
     const tip = `${a.name} ↔ ${b.name} · ${fmt(cost(a, b))} M USD`;
     hit.addEventListener("pointermove", (e) => showTip(e, tip));
     hit.addEventListener("pointerleave", hideTip);
+    hit.onclick=e=>editEdge(key,e);
 
 
     {
@@ -382,8 +379,17 @@ function renderMap() {
         linkGroup,
         `${fmt(cost(a, b))}`,
       );
+      if(mode==='manual'){
+        label.setAttribute('pointer-events','all');label.setAttribute('role','button');label.setAttribute('tabindex','0');label.setAttribute('aria-label',`Editar costo ${a.name} a ${b.name}`);label.style.cursor='pointer';
+        label.onclick=e=>editEdge(key,e);label.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();editEdge(key,e);}};
+      }
       edgeLabels.push({element:label,x1,y1,x2,y2});
     }
+  }
+  const proposed=result?.lexicographic.length?result?.reference?.missing:result?.suggestion;
+  for(const key of proposed||[]){
+    const [a,b]=key.split('|').map(city),[x1,y1]=projection([a.lon,a.lat]),[x2,y2]=projection([b.lon,b.lat]);
+    svgEl('line',{x1,y1,x2,y2,stroke:'#fcba15','stroke-width':2,'stroke-dasharray':'6 5','vector-effect':'non-scaling-stroke','pointer-events':'none'},viewport);
   }
   if (currentRoute) {
     const points = currentRoute.map((c) => projection([c.lon, c.lat]));
@@ -562,8 +568,8 @@ function hideTip() {
 const helpSections=[
  ['La red ferroviaria','Buscamos el circuito más barato que visite todas tus ciudades y regrese al inicio. Cada mapa conserva sus 20 ciudades; selecciona entre 5 y 10 directamente en el mapa.'],
  ['Construir y limpiar','Elige primero un modo. Manual: selecciona las ciudades y luego pulsa dos ciudades elegidas para añadir o quitar su enlace. Conectar todo une cada pareja; Aleatorio crea enlaces con probabilidad 50 %. Mayús + clic permite quitar una ciudad en cualquier modo. La papelera limpia todo el mapa.'],
- ['Costos','El costo por defecto es de 1 a 90 millones de dólares simulados. Solo en Manual puedes cambiarlo por un entero entre 1 y 99 desde la matriz. Al cambiar de modo se usan los costos por defecto; tus cambios se recuperan al volver a Manual. Combinamos distancia, un factor simulado de dificultad por corredor y una inversión fija. Los parámetros son reproducibles: no cambian al pulsar Aleatorio ni se ajustan para forzar un recorrido ganador. No son presupuestos ferroviarios reales.'],
- ['Matriz','Los números de fila y columna corresponden a las ciudades numeradas del mapa. Cada valor es el costo de viajar entre ambas. Una casilla carbón significa misma ciudad o ausencia de conexión. La matriz aparece a partir de cinco ciudades. En Manual, pulsa una casilla carbón fuera de la diagonal para activar el enlace con su costo por defecto y escribe para modificarlo (1–99). La casilla simétrica y el mapa se actualizan juntos. Para eliminar una arista, pulsa sus dos extremos en el mapa.'],
+ ['Costos','El costo por defecto es de 1 a 90 millones de dólares simulados. Solo en Manual puedes cambiarlo por un entero entre 1 y 99 pulsando su peso en el mapa. Al cambiar de modo se usan los costos por defecto; tus cambios se recuperan al volver a Manual. Combinamos distancia, un factor simulado de dificultad por corredor y una inversión fija. Los parámetros son reproducibles: no cambian al pulsar Aleatorio ni se ajustan para forzar un recorrido ganador. No son presupuestos ferroviarios reales.'],
+ ['Matriz','Los números de fila y columna corresponden a las ciudades numeradas del mapa. Cada valor es el costo de viajar entre ambas. Una casilla carbón significa misma ciudad o ausencia de conexión. El botón Ver matriz abre una consulta de la red desde cinco ciudades. Edita los pesos y elimina conexiones pulsando sus etiquetas en el mapa.'],
  ['Fuerza bruta','Fijamos la primera ciudad del orden del catálogo y enumeramos las permutaciones en orden lexicográfico. Comprobamos cada enlace, incluido el regreso; sumamos los costos y comparamos. Una ruta y su inversa se cuentan una sola vez.'],
  ['Exploración','Al conectar tu red evaluamos sus ciclos en segundo plano. Si hay ciclos, puedes usar Siguiente ciclo o Siguiente paso directamente. Las cuatro fases son generar, comprobar, sumar y comparar. Mejor visitado conserva el mínimo de los ciclos que ya has visto, incluso al retroceder. Encontrar ruta óptima revela el mínimo global.'],
  ['Cantidad de ciclos y reparación','En un grafo completo hay (n − 1)! / 2 ciclos únicos: 12 con cinco ciudades y 181 440 con diez. Si no hay un ciclo válido, proponemos el menor número de enlaces nuevos que permita formar uno. La sugerencia minimiza cantidad de aristas, no inversión.'],
@@ -586,7 +592,12 @@ document.addEventListener('wheel',e=>{
 $('#region').onchange=e=>setRegion(e.target.value);
 $('#manual').onclick=()=>setMode('manual');$('#connect').onclick=()=>setMode('all');$('#random-edges').onclick=()=>setMode('random');
 $('#clear-map').onclick=()=>{invalidate();selected=[];edges.clear();manualWeights={};manualStart=null;fitRequested=true;refresh(false);};
-$('#solve').onclick=()=>analyze('best');
+$('#solve').onclick=()=>{if(result?.lexicographic.length&&!busy)performAction('best');};
+$('#matrix-toggle').onclick=()=>{$('#matrix-dialog').showModal();};
+$('#matrix-close').onclick=()=>$('#matrix-dialog').close();
+$('#edge-cancel').onclick=()=>{$('#edge-editor').hidden=true;editingEdge=null;};
+$('#edge-editor').onsubmit=e=>{e.preventDefault();const value=$('#edge-value').value;if(!/^[1-9][0-9]?$/.test(value)){$('#edge-error').textContent='Ingresa un entero de 1 a 99.';return;}const key=editingEdge;if(!key)return;invalidate();manualWeights[key]=Number(value);refresh();};
+$('#edge-delete').onclick=()=>{const key=editingEdge;if(!key)return;invalidate();edges.delete(key);refresh();};
 $('#prev').onclick=()=>{const pos=result?.lexicographic.indexOf(currentIndex)??-1;if(pos>0)showCycle(result.lexicographic[pos-1]);};
 $('#next').onclick=()=>{const ids=result?.lexicographic,pos=ids?.indexOf(currentIndex)??-1;if(ids&&pos<ids.length-1)showCycle(ids[pos+1]);};
 $('#current-tab').onclick=()=>{resultTab='current';renderCycle();};$('#routes-tab').onclick=()=>{exploreMode=false;resultTab='all';renderCycle();};
@@ -594,7 +605,7 @@ $('#help').onclick=()=>{const open=$('#help-popover').hidden;$('#help-popover').
 $('#close-help').onclick=()=>{$('#help-popover').hidden=true;$('#help').setAttribute('aria-expanded','false');$('#help').focus({preventScroll:true});};
 $('#help-prev').onclick=()=>{helpPage--;renderHelp();};$('#help-next').onclick=()=>{helpPage++;renderHelp();};
 $('#zoom-in').onclick=()=>{if(zoomBehavior)select($('#map')).call(zoomBehavior.scaleBy,1.4);};$('#zoom-out').onclick=()=>{if(zoomBehavior)select($('#map')).call(zoomBehavior.scaleBy,1/1.4);};$('#zoom-reset').onclick=()=>{fitRequested=true;renderMap();};
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('#help-popover').hidden=true;$('#help').setAttribute('aria-expanded','false');manualStart=null;if(world)renderMap();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('#edge-editor').hidden=true;editingEdge=null;$('#help-popover').hidden=true;$('#help').setAttribute('aria-expanded','false');manualStart=null;if(world)renderMap();}});
 let resizeTimer;new ResizeObserver(()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(world)renderMap();},100);}).observe($('.map-wrap'));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelAnimationFrame(trainFrame);else if(world&&document.body.classList.contains('planning'))renderMap();});
 try{

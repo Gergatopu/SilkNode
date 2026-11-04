@@ -14,3 +14,18 @@
 .matrix-cost{cursor:text;outline-offset:-2px!important}
 .matrix-cost:focus{background:#fff4cd;outline:2px solid var(--teal)}
 .matrix-cost[aria-invalid=true]{background:#ffe0dc;outline:2px solid var(--red)}
+/* Graph workspace: controls are overlays, with a clear cartographic area. */
+.workspace{display:block;position:relative}.map-column{height:100%;display:block}.map-wrap{height:100%}
+.sidebar{position:absolute;left:16px;top:76px;bottom:70px;width:300px;display:flex;flex-direction:column;gap:16px;pointer-events:none}
+.network-controls,.cycle-panel{pointer-events:auto;background:#fff;padding:14px;border-radius:12px;border:0}
+.cycle-panel{flex:1;min-height:180px;max-height:310px;gap:10px}.network-controls{gap:10px}
+.primary{background:#b7c6cb;color:#192126}.primary:not(:disabled){background:#278249;color:#fff}.primary:hover:not(:disabled){background:#1d6b3a}
+.route-navigation{position:absolute;left:340px;right:70px;bottom:54px;gap:10px}.route-navigation span{background:#fff;padding:8px;border-radius:6px}.route-navigation button{min-width:130px}
+.map-top{left:16px;top:16px}.map-footer{left:340px}.clear-map{left:18px;bottom:18px}
+.matrix-toggle{position:absolute;left:66px;bottom:18px}.popover{left:330px;top:16px}
+.reference-panel{position:absolute;right:70px;bottom:105px;width:290px;background:#fff;padding:14px;border-radius:12px;font-size:14px;box-shadow:var(--shadow)}
+.reference-panel p{margin:8px 0;line-height:1.25}.reference-panel p+p{font-size:12px;color:var(--muted)}.reference-panel button{background:var(--yellow);width:100%}
+.edge-editor{position:absolute;z-index:5;width:320px;background:#fff;padding:16px;border-radius:12px;box-shadow:var(--shadow)}.edge-editor label{display:flex;align-items:center;gap:12px;margin:12px 0}.edge-editor input{width:75px}.edge-editor>div{display:flex;flex-wrap:wrap;gap:6px}.edge-editor p{color:#a7211d;font-size:13px}
+#matrix-dialog{border:0;border-radius:12px;padding:20px;width:min(560px,85vw);height:min(590px,85dvh);color:var(--ink);box-shadow:var(--shadow)}#matrix-dialog::backdrop{background:#19212688}#matrix-dialog>p{margin:12px 0;color:var(--muted)}#matrix-content{height:calc(100% - 75px);container-type:size;display:flex;justify-content:center;align-items:center}
+#map-tooltip{z-index:4}.routes-list button{gap:8px}.planner-head:after{content:'Encuentra el circuito ferroviario más barato que visita tus ciudades y regresa al inicio.';margin-left:24px;font-size:15px;color:var(--muted)}
+@media(max-height:700px){.sidebar{top:68px;gap:10px}.network-controls,.cycle-panel{padding:10px}.cycle-panel{gap:6px}.reference-panel{bottom:100px}.route-navigation{bottom:50px}}
