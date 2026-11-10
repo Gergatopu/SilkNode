@@ -6,7 +6,7 @@ import '@fontsource/league-spartan/latin-800.css';
 import { geoMercator, geoPath, geoArea, select, zoom, zoomIdentity } from 'd3';
 import { edgeKey, decode } from './algorithm.js';
 import { manualClick } from './graph.js';
-import { scenarioWeights, randomGraph } from './weights.js';
+import { scenarioWeights, randomGraph, updateRandomGraph } from './weights.js';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const fmt=n=>new Intl.NumberFormat('es-PE',{maximumFractionDigits:0}).format(n);
 const arrow='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
@@ -58,7 +58,7 @@ function invalidate(){
  cancelAnimationFrame(trainFrame);$('#progress').hidden=true;notice('');
 }
 function complete(){edges.clear();for(let i=0;i<selected.length;i++)for(let j=i+1;j<selected.length;j++)edges.add(edgeKey(selected[i],selected[j]));}
-function applyMode(){if(selected.length<2)return;if(mode==='all')complete();if(mode==='random')edges=new Set(randomGraph(selected,seed).edges);}
+function applyMode(previousIds=null){if(mode==='all')complete();if(mode==='random')edges=new Set((previousIds?updateRandomGraph(selected,previousIds,edges,seed):randomGraph(selected,seed)).edges);}
 function setMode(next){invalidate();mode=next;manualStart=null;if(next==='random')seed=crypto.getRandomValues(new Uint32Array(1))[0];applyMode();fitRequested=selected.length>=5;refresh();}
 function refresh(schedule=true){
  if(!regions)return;
@@ -74,9 +74,10 @@ function refresh(schedule=true){
 function toggleCity(id){
  if(!mode){notice('Elige Manual, Conectar todo o Aleatorio.',true);return;}
  if(!selected.includes(id)&&selected.length===10){notice('Máximo 10 ciudades. Mayús + clic para quitar una.',true);return;}
+ const previousIds=[...selected];
  invalidate();selected=selected.includes(id)?selected.filter(x=>x!==id):[...selected,id];
  selected.sort((a,b)=>regions[region].cities.findIndex(c=>c.id===a)-regions[region].cities.findIndex(c=>c.id===b));
- edges=new Set([...edges].filter(k=>k.split('|').every(id=>selected.includes(id))));manualStart=null;applyMode();refresh();
+ edges=new Set([...edges].filter(k=>k.split('|').every(id=>selected.includes(id))));manualStart=null;applyMode(previousIds);refresh();
 }
 function clickCity(id,event={}){
  if(event.shiftKey){toggleCity(id);return;}
@@ -570,7 +571,7 @@ function hideTip() {
 }
 const helpSections=[
  ['La red ferroviaria','Buscamos el circuito más barato que visite todas tus ciudades y regrese al inicio. Cada mapa conserva sus 20 ciudades; selecciona entre 5 y 10 directamente en el mapa.'],
- ['Construir y limpiar','Elige primero un modo. Manual: cada pareja de clics en ciudades distintas crea una conexión, desde la segunda ciudad. Una conexión existente no se duplica ni se elimina al repetirla. Pulsa cualquier parte de la arista para editar o eliminar. Conectar todo une cada pareja; Aleatorio crea enlaces con probabilidad 50 %. Mayús + clic permite quitar una ciudad en cualquier modo. La papelera limpia todo el mapa.'],
+ ['Construir y limpiar','Elige primero un modo. Manual: cada pareja de clics en ciudades distintas crea una conexión, desde la segunda ciudad. Una conexión existente no se duplica ni se elimina al repetirla. Pulsa cualquier parte de la arista para editar o eliminar. Conectar todo une cada pareja; Aleatorio crea conexiones al seleccionar cinco ciudades, con probabilidad del 80 %. Al añadir ciudades conserva la red y genera conexiones hacia las nuevas. Mayús + clic permite quitar una ciudad en cualquier modo. La papelera limpia todo el mapa.'],
  ['Costos','El costo por defecto es de 1 a 90 millones de dólares simulados. Solo en Manual puedes cambiarlo por un entero entre 1 y 99 pulsando su peso en el mapa. Al cambiar de modo se usan los costos por defecto; tus cambios se recuperan al volver a Manual. Combinamos distancia, un factor simulado de dificultad por corredor y una inversión fija. Los parámetros son reproducibles: no cambian al pulsar Aleatorio ni se ajustan para forzar un recorrido ganador. No son presupuestos ferroviarios reales.'],
  ['Matriz','Los números de fila y columna corresponden a las ciudades numeradas del mapa. Cada valor es el costo de viajar entre ambas. Una casilla carbón significa misma ciudad o ausencia de conexión. El botón Ver matriz abre una consulta de la red desde cinco ciudades. Edita los pesos y elimina conexiones pulsando sus etiquetas en el mapa.'],
  ['Fuerza bruta','Fijamos la primera ciudad del orden del catálogo y enumeramos las permutaciones en orden lexicográfico. Comprobamos cada enlace, incluido el regreso; sumamos los costos y comparamos. Una ruta y su inversa se cuentan una sola vez.'],

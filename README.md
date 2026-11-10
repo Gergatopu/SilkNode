@@ -24,7 +24,7 @@ Ejecutar `npm run build` después de cualquier cambio. La carpeta `dist` resulta
 1. Pulsar **Empezar**, elegir escenario y modo. Seleccionar 5–10 de las 20 ciudades en el mapa.
 2. En **Manual**, pulsar una ciudad y luego otra: la arista aparece desde la segunda ciudad. Repetir con parejas nuevas o existentes; repetir una arista no la elimina. Se permiten componentes desconectados y hasta 10 ciudades.
 3. Pulsar cualquier parte de una arista o su peso para editarlo (entero 1–99), guardar, cancelar o eliminar la conexión. Mayús + clic elimina una ciudad. La búsqueda requiere al menos 5 ciudades.
-4. **Conectar todo** une cada pareja. **Aleatorio** regenera conexiones sin garantizar un ciclo y sin cambiar sus costos predeterminados.
+4. **Conectar todo** une cada pareja. **Aleatorio** comienza a conectar al seleccionar cinco ciudades, con probabilidad del 80 % por pareja. Al añadir otra ciudad conserva la red existente y genera conexiones hacia la nueva. Pulsar Aleatorio regenera la red; no garantiza un ciclo ni cambia sus costos predeterminados.
 5. El botón **Encontrar ruta óptima** siempre permanece visible. Está atenuado mientras no haya ciclos o se esté evaluando; se habilita en verde cuando existe al menos uno.
 6. La lista **Todos** muestra los ciclos disponibles con paginación y tantas filas como caben en su panel. La navegación y el paso a paso permanecen dentro del mapa.
 7. Si no hay ciclos, el panel indica el mínimo número de conexiones para formar uno; entre reparaciones de igual tamaño elige el circuito de menor costo total. No dibuja conexiones ficticias durante la construcción.

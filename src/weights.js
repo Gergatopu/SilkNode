@@ -32,10 +32,22 @@ export function scenarioWeights(cities) {
   return Object.fromEntries(pairs.map(([key, raw]) => [key, Math.max(1, Math.min(90, Math.round(90 * raw / maximum)))]));
 }
 export function randomGraph(ids, seed) {
-  const next = randomSource(seed), edges = [];
+  if (ids.length < 5) return { edges: [] };
+  const edges = [];
   ids.forEach((a, i) => ids.slice(i + 1).forEach(b => {
     const key = edgeKey(a, b);
-    if (next() < .5) edges.push(key);
+    if (randomSource(hash(`${seed}:${key}`))() < .8) edges.push(key);
   }));
   return { edges };
+}
+
+export function updateRandomGraph(ids, previousIds, existingEdges, seed) {
+  if (ids.length < 5) return { edges: [] };
+  if (previousIds.length < 5) return randomGraph(ids, seed);
+  const active = new Set(ids), previous = new Set(previousIds);
+  const edges = new Set([...existingEdges].filter(key => key.split('|').every(id => active.has(id))));
+  for (const key of randomGraph(ids, seed).edges) {
+    if (key.split('|').some(id => !previous.has(id))) edges.add(key);
+  }
+  return { edges: [...edges] };
 }
